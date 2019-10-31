@@ -20,12 +20,24 @@ type AppState = {
   audio: boolean,
   recording: boolean,
   recording_link: string,
-  recording_duration: number
+  recording_duration: number | null,
   guest_link: string,
 }
 class App extends Component<{}, AppState> {
 
   private roomClient!: RoomClient;
+
+  constructor(props:{}) {
+    super(props)
+    this.state = {
+      connecting: false,
+      stream: "",
+      audio: false,
+      recording: false,
+      recording_link: "",
+      recording_duration: null,
+      guest_link: ""};
+  }
 
   private startOpenningRoom = async (event: React.ChangeEvent<HTMLInputElement>) => {
     console.time("TDX-time Total to ScreenRecording");
