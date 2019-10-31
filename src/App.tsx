@@ -4,7 +4,7 @@ import { IconButton } from '@rmwc/icon-button';
 import { ThemeProvider } from '@rmwc/theme';
 import { Grid, GridCell } from '@rmwc/grid';
 import { LinearProgress } from '@rmwc/linear-progress';
-// import eyeson from 'eyeson';
+import eyeson from 'eyeson';
 import Toolbar from './Toolbar';
 import Video from './Video';
 import Timer from 'react-compound-timer';
@@ -12,11 +12,12 @@ import Timer from 'react-compound-timer';
 import './App.css';
 
 import RoomClient from './RoomClient';
+import ScreenCapture from './ScreenCapture';
 
 const API_KEY_LENGTH = 42;
 type AppState = {
   connecting: boolean,
-  stream: string,
+  stream: MediaStream | null,
   audio: boolean,
   recording: boolean,
   recording_link: string,
@@ -26,17 +27,66 @@ type AppState = {
 class App extends Component<{}, AppState> {
 
   private roomClient!: RoomClient;
+  private screenCap: ScreenCapture;
 
   constructor(props:{}) {
     super(props)
     this.state = {
       connecting: false,
-      stream: "",
+      stream: null,
       audio: false,
       recording: false,
       recording_link: "",
       recording_duration: null,
-      guest_link: ""};
+      guest_link: ""
+    };
+    this.screenCap = new ScreenCapture();
+  }
+
+  public componentDidMount = () => {
+    eyeson.onEvent(this.handleEvent);
+  }
+
+  private handleEvent = async (event: any) => {
+    if (event.type !== "voice_activity")
+      console.debug("TDX Eyeson event received ", JSON.stringify(event));
+
+    switch (event.type) {
+      case "connection":
+        if (event.connectionStatus === "ready") {
+          eyeson.join({ audio: false, video: true });
+        }
+        break;
+      case "accept":
+        if (this.state.connecting) {
+
+          console.timeEnd("TDX-time Total to JoinRoom");
+          const track = await this.screenCap.getScreenTrack();
+          console.log("TDX- Track", JSON.stringify(track));
+          // eyeson.send({ type: 'start_screen_capture', screen: true });
+          // eyeson.setVideoTrack(track);
+          const screenStream = await this.screenCap.getScreenStream();
+          this.setState({
+            // local: event.localStream,
+            // stream: event.remoteStream,
+            stream: screenStream,
+            connecting: false,
+          });
+          this.toggleRecording();
+        }
+        break;
+      case "recording_update":
+        this.setState({
+          recording_link: event.recording.links.download,
+          recording_duration: event.recording.duration
+        });
+
+        if (event.recording.created_at)
+          console.timeEnd("TDX-time Total to ScreenRecording");
+
+        break;
+      default:
+    }
   }
 
   private startOpenningRoom = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,16 +108,16 @@ class App extends Component<{}, AppState> {
 
     console.time("TDX-time Connect");
     // eyeson.start(party.access_key);
-    // eyeson.connect(party.access_key);
+    eyeson.connect(party.access_key);
     console.timeEnd("TDX-time Connect");
 
     this.setState({ guest_link: party.links.guest_join });
   }
 
   private toggleRecording = () => {
-    // eyeson.send({
-    //   type: this.state.recording ? 'stop_recording' : 'start_recording',
-    // });
+    eyeson.send({
+      type: this.state.recording ? 'stop_recording' : 'start_recording',
+    });
     this.setState({ recording: !this.state.recording });
   }
 
