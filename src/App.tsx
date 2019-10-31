@@ -64,7 +64,7 @@ class App extends Component<{}, AppState> {
    */
   public render() {
 
-    return (<></>
+    return (
       <ThemeProvider options={{ primary: '#9e206c', secondary: '#6d6d6d' }}>
         <Toolbar title="TDX POC" />
         <Grid className="App">
