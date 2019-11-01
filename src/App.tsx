@@ -13,6 +13,7 @@ import './App.css';
 
 import RoomClient from './RoomClient';
 import ScreenCapture from './ScreenCapture';
+import { StopWatch, IStopWatchManager } from './StopWatch';
 
 const API_KEY_LENGTH = 42;
 type AppState = {
@@ -28,8 +29,9 @@ class App extends Component<{}, AppState> {
 
   private roomClient!: RoomClient;
   private screenCap: ScreenCapture;
-  private startEvent! : ()=>{};
-  private stopEvent! : ()=>{};
+
+  private stopWatchConnectionStarted!: IStopWatchManager;
+  private stopWatchRoomJoined!: IStopWatchManager;
 
   constructor(props: {}) {
     super(props)
@@ -61,7 +63,7 @@ class App extends Component<{}, AppState> {
         break;
       case "accept":
         if (this.state.connecting) {
-
+          this.stopWatchRoomJoined.start();
           console.timeEnd("TDX-time Total to JoinRoom");
           const screenStream = await this.screenCap.getScreenStream();
           // const screenTrack = await this.screenCap.getScreenTrack();
@@ -81,9 +83,11 @@ class App extends Component<{}, AppState> {
         }
         break;
       case "recording_update":
-        if (event.recording.created_at){
+        if (event.recording.created_at) {
           console.timeEnd("TDX-time Total to ScreenRecording");
-          this.stopEvent();
+          this.stopWatchConnectionStarted.stop();
+          this.stopWatchRoomJoined.stop();
+          console.log("TD TIME", this.stopWatchRoomJoined.getTime());
         }
 
         this.setState({
@@ -96,7 +100,7 @@ class App extends Component<{}, AppState> {
   }
 
   private startOpenningRoom = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    this.startEvent();
+    this.stopWatchConnectionStarted.start();
     console.time("TDX-time Total to ScreenRecording");
     console.time("TDX-time Total to JoinRoom");
 
@@ -136,26 +140,9 @@ class App extends Component<{}, AppState> {
     return (
       <ThemeProvider options={{ primary: '#9e206c', secondary: '#6d6d6d' }}>
         <Toolbar title="TDX POC" />
-        <GridCell span={12}>
-          <Timer
-            startImmediately={false}
-          >
-            {
-              // @ts-ignore 
-              ({ start, resume, pause, stop, reset, timerState }) => {
-                this.startEvent = start;
-                this.stopEvent = stop;
-
-                return (
-                  <>
-                    &nbsp;&nbsp;
-                    <strong><Timer.Seconds /></strong> seconds since connecting.
-                  </>
-                  );
-              }
-            }
-          </Timer>
-        </GridCell>
+        <StopWatch text="since connecting has started." managerRef={(ref) => (this.stopWatchConnectionStarted = ref)} />
+        <StopWatch text="since room joined." managerRef={(ref) => (this.stopWatchRoomJoined = ref)} />
+        All timers stops when recording event comes from eyeson.
         <Grid className="App">
           <GridCell span={12}>
             {this.state.connecting && <LinearProgress determinate={false} />}
@@ -177,18 +164,19 @@ class App extends Component<{}, AppState> {
           </GridCell>
           <GridCell span={1} className="App-sidebar">
             {this.state.stream && (
-              <Fragment>
+              <Fragment >
                 <IconButton
                   checked={this.state.recording}
                   onClick={this.toggleRecording}
                   label="Toggle recording"
-                  icon={this.state.recording ? 'radio_button_checked' : 'radio_button_unchecked'}
+                  icon={this.state.recording ? 'stop' : 'radio_button_checked'}
                 />
+                {this.state.recording&&<>Recording</>}
               </Fragment>
             )}
           </GridCell>
           <GridCell span={12}>
-            {this.state.recording && <Timer><strong><Timer.Minutes /></strong> minutes &nbsp;<strong><Timer.Seconds /></strong> seconds since we started to record screen.</Timer>}
+            {this.state.recording && <StopWatch text="since we started to record screen." startImmediately={true} />}
           </GridCell>
           <GridCell span={12}>
             {this.state.guest_link && <><strong>Guest Link: </strong> <a rel="noopener noreferrer" target="_blank" href={this.state.guest_link} >{this.state.guest_link}</a></>}
