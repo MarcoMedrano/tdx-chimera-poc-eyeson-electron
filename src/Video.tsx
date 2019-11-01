@@ -2,10 +2,11 @@ import React, {Component} from 'react';
 import './Video.css';
 
 interface IVideoProps {
-  src:any;
+  src: MediaStream | MediaSource | Blob | null;
 }
 
 class Video extends Component<IVideoProps> {
+
   shouldComponentUpdate() {
     return false; // disable updates
   }

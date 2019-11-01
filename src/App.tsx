@@ -20,9 +20,9 @@ type AppState = {
   stream: MediaStream | null,
   audio: boolean,
   recording: boolean,
-  recording_link: string,
+  recording_link: string | null,
   recording_duration: number | null,
-  guest_link: string,
+  guest_link: string | null,
 }
 class App extends Component<{}, AppState> {
 
@@ -36,9 +36,9 @@ class App extends Component<{}, AppState> {
       stream: null,
       audio: false,
       recording: false,
-      recording_link: "",
+      recording_link: null,
       recording_duration: null,
-      guest_link: ""
+      guest_link: null
     };
     this.screenCap = new ScreenCapture();
   }
@@ -61,13 +61,16 @@ class App extends Component<{}, AppState> {
         if (this.state.connecting) {
 
           console.timeEnd("TDX-time Total to JoinRoom");
-          const track = await this.screenCap.getScreenTrack();
-          console.log("TDX- Track", JSON.stringify(track));
-          // eyeson.send({ type: 'start_screen_capture', screen: true });
-          // eyeson.setVideoTrack(track);
           const screenStream = await this.screenCap.getScreenStream();
+          // const screenTrack = await this.screenCap.getScreenTrack();
+          // SO INSTEAD OF
+          // eyeson.send({ type: 'start_screen_capture', screen: true }});
+          // WE NEED SOMETHING LIKE
+          // eyeson.send({ type: 'stream', stream: screenStream });
+          // OR
+          // eyeson.send({ type: 'track', track: screenTrack });
+
           this.setState({
-            // local: event.localStream,
             // stream: event.remoteStream,
             stream: screenStream,
             connecting: false,
