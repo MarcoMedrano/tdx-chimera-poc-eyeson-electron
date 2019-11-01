@@ -18,7 +18,7 @@ const API_KEY_LENGTH = 42;
 type AppState = {
   connecting: boolean,
   stream: MediaStream | null,
-  audio: boolean,
+  recordingStarted: boolean,
   recording: boolean,
   recording_link: string | null,
   recording_duration: number | null,
@@ -28,13 +28,15 @@ class App extends Component<{}, AppState> {
 
   private roomClient!: RoomClient;
   private screenCap: ScreenCapture;
+  private startEvent! : ()=>{};
+  private stopEvent! : ()=>{};
 
-  constructor(props:{}) {
+  constructor(props: {}) {
     super(props)
     this.state = {
       connecting: false,
       stream: null,
-      audio: false,
+      recordingStarted: false,
       recording: false,
       recording_link: null,
       recording_duration: null,
@@ -54,7 +56,7 @@ class App extends Component<{}, AppState> {
     switch (event.type) {
       case "connection":
         if (event.connectionStatus === "ready") {
-          eyeson.join({ audio: false, video: true });
+          eyeson.join({ audio: false, video: false });
         }
         break;
       case "accept":
@@ -79,20 +81,22 @@ class App extends Component<{}, AppState> {
         }
         break;
       case "recording_update":
+        if (event.recording.created_at){
+          console.timeEnd("TDX-time Total to ScreenRecording");
+          this.stopEvent();
+        }
+
         this.setState({
           recording_link: event.recording.links.download,
           recording_duration: event.recording.duration
         });
-
-        if (event.recording.created_at)
-          console.timeEnd("TDX-time Total to ScreenRecording");
-
         break;
       default:
     }
   }
 
   private startOpenningRoom = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    this.startEvent();
     console.time("TDX-time Total to ScreenRecording");
     console.time("TDX-time Total to JoinRoom");
 
@@ -132,6 +136,26 @@ class App extends Component<{}, AppState> {
     return (
       <ThemeProvider options={{ primary: '#9e206c', secondary: '#6d6d6d' }}>
         <Toolbar title="TDX POC" />
+        <GridCell span={12}>
+          <Timer
+            startImmediately={false}
+          >
+            {
+              // @ts-ignore 
+              ({ start, resume, pause, stop, reset, timerState }) => {
+                this.startEvent = start;
+                this.stopEvent = stop;
+
+                return (
+                  <>
+                    &nbsp;&nbsp;
+                    <strong><Timer.Seconds /></strong> seconds since connecting.
+                  </>
+                  );
+              }
+            }
+          </Timer>
+        </GridCell>
         <Grid className="App">
           <GridCell span={12}>
             {this.state.connecting && <LinearProgress determinate={false} />}
@@ -164,7 +188,7 @@ class App extends Component<{}, AppState> {
             )}
           </GridCell>
           <GridCell span={12}>
-            {this.state.recording && <Timer><strong><Timer.Seconds /></strong> seconds since we started to record screen.</Timer>}
+            {this.state.recording && <Timer><strong><Timer.Minutes /></strong> minutes &nbsp;<strong><Timer.Seconds /></strong> seconds since we started to record screen.</Timer>}
           </GridCell>
           <GridCell span={12}>
             {this.state.guest_link && <><strong>Guest Link: </strong> <a rel="noopener noreferrer" target="_blank" href={this.state.guest_link} >{this.state.guest_link}</a></>}
