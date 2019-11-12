@@ -54,13 +54,21 @@ class App extends Component<{}, AppState> {
     switch (event.type) {
       case "connection":
         if (event.connectionStatus === "ready") {
-          eyeson.join({ audio: false, video: true });
+          const screenStream = await this.screenCap.getScreenStream();
+          this.setState({
+            stream: screenStream
+          });
+
+          //  Join the eyeson session with existing screen stream
+          eyeson.join({ audio: false, video: true, existingStream: this.state.stream });
         }
         break;
       case "accept":
         if (this.state.connecting) {
 
           console.timeEnd("TDX-time Total to JoinRoom");
+
+          /*
           const screenStream = await this.screenCap.getScreenStream();
           // const screenTrack = await this.screenCap.getScreenTrack();
           // SO INSTEAD OF
@@ -74,6 +82,18 @@ class App extends Component<{}, AppState> {
             // stream: event.remoteStream,
             stream: screenStream,
             connecting: false,
+          });
+          */
+
+          //  This sets the conference resolution to fullscreen instead of tile
+          //  Will be replaced in the JavaScript library update by a similar event like you commented above
+          eyeson.send({
+            type: 'start_screen_capture',
+            audio: false
+          });
+
+          this.setState({
+            connecting: false
           });
           this.toggleRecording();
         }
