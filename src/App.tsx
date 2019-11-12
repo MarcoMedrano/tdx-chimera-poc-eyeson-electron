@@ -7,7 +7,6 @@ import { LinearProgress } from '@rmwc/linear-progress';
 import eyeson from 'eyeson';
 import Toolbar from './Toolbar';
 import Video from './Video';
-import Timer from 'react-compound-timer';
 
 import './App.css';
 

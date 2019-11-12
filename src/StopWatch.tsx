@@ -31,7 +31,7 @@ class StopWatch extends Component<IStopWatchProps, {}> {
 
   public render = () => {
     return (
-      <GridCell span={12}>
+      <GridCell span={12} style={{padding:4}}>
         <Timer
           formatValue={(value) => `${(value < 10 ? `0${value}` : value)}`}
           startImmediately={this.props.startImmediately || false}
