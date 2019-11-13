@@ -68,8 +68,8 @@ class App extends Component<{}, AppState> {
         break;
       case "accept":
         if (this.state.connecting) {
+          console.log("TDX Eyeson  Room joined");
           this.stopWatchRoomJoined.start();
-          console.timeEnd("TDX-time Total to JoinRoom");
 
           /*
           const screenStream = await this.screenCap.getScreenStream();
@@ -87,15 +87,10 @@ class App extends Component<{}, AppState> {
             connecting: false,
           });
           */
-
-
-
-         
         }
         break;
       case "recording_update":
         if (event.recording.created_at) {
-          console.timeEnd("TDX-time Total to ScreenRecording");
           this.stopWatchConnectionStarted.stop();
           this.stopWatchRoomJoined.stop();
           console.log("TD TIME", this.stopWatchRoomJoined.getTime());
@@ -106,20 +101,20 @@ class App extends Component<{}, AppState> {
           recording_duration: event.recording.duration
         });
         break;
-        case "podium":
-          if (this.state.connecting) {
+      case "podium":
+        if (this.state.connecting) {
           //  This sets the conference resolution to fullscreen instead of tile
           //  Will be replaced in the JavaScript library update by a similar event like you commented above
           eyeson.send({
             type: 'start_screen_capture',
             audio: false
           });
-            this.setState({
-              connecting: false
-            });
-            this.toggleRecording();
-          }
-        
+          this.setState({
+            connecting: false
+          });
+          this.toggleRecording();
+        }
+
         break;
       default:
     }
@@ -127,26 +122,19 @@ class App extends Component<{}, AppState> {
 
   private startOpenningRoom = async (event: React.ChangeEvent<HTMLInputElement>) => {
     this.stopWatchConnectionStarted.start();
-    console.time("TDX-time Total to ScreenRecording");
-    console.time("TDX-time Total to JoinRoom");
-
     const apiKey = event.target.value.trim();
     if (apiKey.length !== API_KEY_LENGTH) { return; }
 
-    console.time("TDX-time OpenRoom");
     this.roomClient = new RoomClient(apiKey);
 
     this.setState({ connecting: true });
 
     const party = await this.roomClient.openRoom();
-    console.timeEnd("TDX-time OpenRoom");
 
     console.log("TDX Room opened\n", JSON.stringify(party));
 
-    console.time("TDX-time Connect");
     // eyeson.start(party.access_key);
     eyeson.connect(party.access_key);
-    console.timeEnd("TDX-time Connect");
 
     this.setState({ guest_link: party.links.guest_join });
   }
@@ -197,7 +185,7 @@ class App extends Component<{}, AppState> {
                   label="Toggle recording"
                   icon={this.state.recording ? 'stop' : 'radio_button_checked'}
                 />
-                {this.state.recording&&<>Recording</>}
+                {this.state.recording && <>Recording</>}
               </Fragment>
             )}
           </GridCell>
