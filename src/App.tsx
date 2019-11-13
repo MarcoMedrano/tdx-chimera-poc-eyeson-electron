@@ -88,17 +88,9 @@ class App extends Component<{}, AppState> {
           });
           */
 
-          //  This sets the conference resolution to fullscreen instead of tile
-          //  Will be replaced in the JavaScript library update by a similar event like you commented above
-          eyeson.send({
-            type: 'start_screen_capture',
-            audio: false
-          });
 
-          this.setState({
-            connecting: false
-          });
-          this.toggleRecording();
+
+         
         }
         break;
       case "recording_update":
@@ -113,6 +105,21 @@ class App extends Component<{}, AppState> {
           recording_link: event.recording.links.download,
           recording_duration: event.recording.duration
         });
+        break;
+        case "podium":
+          if (this.state.connecting) {
+          //  This sets the conference resolution to fullscreen instead of tile
+          //  Will be replaced in the JavaScript library update by a similar event like you commented above
+          eyeson.send({
+            type: 'start_screen_capture',
+            audio: false
+          });
+            this.setState({
+              connecting: false
+            });
+            this.toggleRecording();
+          }
+        
         break;
       default:
     }
