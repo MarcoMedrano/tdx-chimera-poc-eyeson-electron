@@ -63,7 +63,7 @@ class App extends Component<{}, AppState> {
           });
 
           //  Join the eyeson session with existing screen stream
-          eyeson.join({ audio: false, video: true, existingStream: this.state.stream });
+          eyeson.join({ audio: false, video: false, existingStream: this.state.stream });
         }
         break;
       case "accept":
