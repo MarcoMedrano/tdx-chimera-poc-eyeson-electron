@@ -102,13 +102,14 @@ class App extends Component<{}, AppState> {
         });
         break;
       case "podium":
-        if (this.state.connecting) {
+        if (!event.isPresenter) {
           //  This sets the conference resolution to fullscreen instead of tile
-          //  Will be replaced in the JavaScript library update by a similar event like you commented above
           eyeson.send({
-            type: 'start_screen_capture',
-            audio: false
+            type: 'start_presenting'
           });
+        }
+
+        if (this.state.connecting) {
           this.setState({
             connecting: false
           });
