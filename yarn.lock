@@ -4827,9 +4827,9 @@ extsprintf@^1.2.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/extsprintf/-/extsprintf-1.4.0.tgz#e2689f8f356fad62cca65a3a91c5df5f9551692f"
 
-eyeson@^1.4.1:
-  version "1.4.1"
-  resolved "https://registry.yarnpkg.com/eyeson/-/eyeson-1.4.1.tgz#64ed26e15fc366768ed2848abb762c6e6b368c10"
+eyeson@^1.4.2:
+  version "1.4.2"
+  resolved "https://registry.yarnpkg.com/eyeson/-/eyeson-1.4.2.tgz#fc5e921de174959fe0775c41ea1e0fc3072ae5e3"
   dependencies:
     "@babel/polyfill" "^7.4.4"
     "@babel/runtime" "^7.5.5"

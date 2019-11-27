@@ -2,22 +2,9 @@ import { desktopCapturer } from 'electron';
 
 export default class ScreenCapture {
 
-  public getScreenStream = async (): Promise<MediaStream> => {
+  public getScreenStream = async (sourceId: string): Promise<MediaStream> => {
+    console.log("Using ScreenCapture screen source: " + sourceId);
     try {
-      let sourceId = "";
-      console.log("ScreenCapture In  getScreenTrack()");
-      const sources = await desktopCapturer.getSources({ types: ['window', 'screen'] });
-      
-      for (const source of sources) {
-        console.log("ScreenCapture Found screen source: " + source.name);
-
-        if (source.name === 'Entire screen' || source.name === "Screen 1") {
-          sourceId = source.id;
-          console.log(`ScreenCapture Found screen source: ${source.name} with id ${source.id}`);
-          break;
-        }
-      }
-
       return await this.getDesktopMedia(sourceId);
     } catch (e) {
       console.log("ScreenCapture " + e);
@@ -25,14 +12,30 @@ export default class ScreenCapture {
     }
   }
 
-  public getScreenTrack = async (): Promise<MediaStreamTrack> => {
-    const stream = await this.getScreenStream();
-    const tracks = stream.getVideoTracks()
-    if(tracks.length > 0)
-      return tracks[0];
-    else
-      throw new Error("No tracks found");
+  public getScreenSources = async (): Promise<[string]> => {
+    try {
+      const sourceIds:[string] = [""];
+      console.log("ScreenCapture In  getScreenTrack()");
+      const sources = await desktopCapturer.getSources({ types: ['window', 'screen'] });
+      for (const source of sources) {
+        console.log(`ScreenCapture Found screen source: ${source.name} with id ${source.id}`);
+        sourceIds.push(source.id);
+      }
+      return sourceIds;
+    } catch (e) {
+      console.log("ScreenCapture " + e);
+      throw e;
+    }
   }
+
+  // public getScreenTrack = async (): Promise<MediaStreamTrack> => {
+  //   const stream = await this.getScreenStream();
+  //   const tracks = stream.getVideoTracks()
+  //   if(tracks.length > 0)
+  //     return tracks[0];
+  //   else
+  //     throw new Error("No tracks found");
+  // }
 
   private getDesktopMedia = async (sourceId: string): Promise<MediaStream> => {
     try {

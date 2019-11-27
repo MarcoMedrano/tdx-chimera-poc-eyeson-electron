@@ -17,6 +17,7 @@ import { StopWatch, IStopWatchManager } from './StopWatch';
 const API_KEY_LENGTH = 42;
 type AppState = {
   connecting: boolean,
+  sourceIds: [string] | [],
   stream: MediaStream | null,
   recordingStarted: boolean,
   recording: boolean,
@@ -36,6 +37,7 @@ class App extends Component<{}, AppState> {
     super(props)
     this.state = {
       connecting: false,
+      sourceIds: [],
       stream: null,
       recordingStarted: false,
       recording: false,
@@ -57,36 +59,19 @@ class App extends Component<{}, AppState> {
     switch (event.type) {
       case "connection":
         if (event.connectionStatus === "ready") {
-          const screenStream = await this.screenCap.getScreenStream();
-          this.setState({
-            stream: screenStream
-          });
+          // grab all available windows and screens and store it in state
+          await this.screenCap.getScreenSources()
+                              .then(sourceIds => {
+                                this.setState({ sourceIds: sourceIds });
+                              });
 
-          //  Join the eyeson session with existing screen stream
-          eyeson.join({ audio: false, video: false, existingStream: this.state.stream });
+          eyeson.join({ audio: false, video: true });
         }
         break;
       case "accept":
         if (this.state.connecting) {
           console.log("TDX Eyeson  Room joined");
           this.stopWatchRoomJoined.start();
-
-          /*
-          const screenStream = await this.screenCap.getScreenStream();
-          // const screenTrack = await this.screenCap.getScreenTrack();
-          // SO INSTEAD OF
-          // eyeson.send({ type: 'start_screen_capture', screen: true }});
-          // WE NEED SOMETHING LIKE
-          // eyeson.send({ type: 'stream', stream: screenStream });
-          // OR
-          // eyeson.send({ type: 'track', track: screenTrack });
-
-          this.setState({
-            // stream: event.remoteStream,
-            stream: screenStream,
-            connecting: false,
-          });
-          */
         }
         break;
       case "recording_update":
@@ -102,17 +87,12 @@ class App extends Component<{}, AppState> {
         });
         break;
       case "podium":
-        if (!event.isPresenter) {
-          //  This sets the conference resolution to fullscreen instead of tile
-          eyeson.send({
-            type: 'start_presenting'
-          });
-        }
-
         if (this.state.connecting) {
           this.setState({
             connecting: false
           });
+          // pick a random screen to be shown after connect
+          this.toggleScreen();
           this.toggleRecording();
         }
 
@@ -145,6 +125,23 @@ class App extends Component<{}, AppState> {
       type: this.state.recording ? 'stop_recording' : 'start_recording',
     });
     this.setState({ recording: !this.state.recording });
+  }
+
+  private updateStream(stream: MediaStream) {
+    eyeson.send({
+      type: 'start_screen_capture',
+      audio: false,
+      screen: true,
+      screenStream: stream
+    });
+    this.setState({ stream: stream });
+  }
+
+  private toggleScreen = async () => {
+    if (this.state.sourceIds.length <= 0) { return }
+    const sourceId = this.state.sourceIds[Math.floor(Math.random() * this.state.sourceIds.length)];
+    this.screenCap.getScreenStream(sourceId)
+                  .then(this.updateStream.bind(this));
   }
 
   /**
@@ -187,6 +184,16 @@ class App extends Component<{}, AppState> {
                   icon={this.state.recording ? 'stop' : 'radio_button_checked'}
                 />
                 {this.state.recording && <>Recording</>}
+              </Fragment>
+            )}
+            {this.state.sourceIds.length > 0 && (
+              <Fragment >
+                <IconButton
+                  onClick={this.toggleScreen}
+                  label="Toggle screen"
+                  icon="refresh"
+                />
+                Toggle screen
               </Fragment>
             )}
           </GridCell>
