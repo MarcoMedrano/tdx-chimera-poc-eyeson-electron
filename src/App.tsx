@@ -33,6 +33,8 @@ class App extends Component<{}, AppState> {
   private stopWatchConnectionStarted!: IStopWatchManager;
   private stopWatchRoomJoined!: IStopWatchManager;
 
+  private sourceIndex = 0;
+
   constructor(props: {}) {
     super(props)
     this.state = {
@@ -139,7 +141,8 @@ class App extends Component<{}, AppState> {
 
   private toggleScreen = async () => {
     if (this.state.sourceIds.length <= 0) { return }
-    const sourceId = this.state.sourceIds[Math.floor(Math.random() * this.state.sourceIds.length)];
+    this.sourceIndex = this.sourceIndex < this.state.sourceIds.length ? this.sourceIndex + 1 : 0;
+    const sourceId = this.state.sourceIds[this.sourceIndex];
     this.screenCap.getScreenStream(sourceId)
                   .then(this.updateStream.bind(this));
   }
