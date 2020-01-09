@@ -4,30 +4,31 @@ import { IconButton } from '@rmwc/icon-button';
 import { ThemeProvider } from '@rmwc/theme';
 import { Grid, GridCell } from '@rmwc/grid';
 import { LinearProgress } from '@rmwc/linear-progress';
-import eyeson from 'eyeson';
 import Toolbar from './Toolbar';
 import Video from './Video';
 
 import './App.css';
 
-import RoomClient from './RoomClient';
+import EyesonRecordingService from './EyesonRecordingService';
 import ScreenCapture from './ScreenCapture';
 import { StopWatch, IStopWatchManager } from './StopWatch';
 
-const API_KEY_LENGTH = 42;
+import eyeson from 'eyeson';
+
+const CLIENT_ID_LENGTH = 7;
+
 type AppState = {
+  clientId: string | null,
   connecting: boolean,
   sourceIds: [string] | [],
   stream: MediaStream | null,
-  recordingStarted: boolean,
   recording: boolean,
-  recording_link: string | null,
-  recording_duration: number | null,
-  guest_link: string | null,
+  recording_bucket: string | null,
+  recording_link: string | null
 }
 class App extends Component<{}, AppState> {
 
-  private roomClient!: RoomClient;
+  private recordingService!: EyesonRecordingService;
   private screenCap: ScreenCapture;
 
   private stopWatchConnectionStarted!: IStopWatchManager;
@@ -38,113 +39,84 @@ class App extends Component<{}, AppState> {
   constructor(props: {}) {
     super(props)
     this.state = {
+      clientId: null,
       connecting: false,
       sourceIds: [],
       stream: null,
-      recordingStarted: false,
       recording: false,
-      recording_link: null,
-      recording_duration: null,
-      guest_link: null
+      recording_bucket: null,
+      recording_link: null
     };
     this.screenCap = new ScreenCapture();
   }
 
   public componentDidMount = () => {
-    eyeson.onEvent(this.handleEvent);
-  }
-
-  private handleEvent = async (event: any) => {
-    if (event.type !== "voice_activity")
-      console.debug("TDX Eyeson event received ", JSON.stringify(event));
-
-    switch (event.type) {
-      case "connection":
-        if (event.connectionStatus === "ready") {
-          // grab all available windows and screens and store it in state
-          await this.screenCap.getScreenSources()
-                              .then(sourceIds => {
-                                this.setState({ sourceIds: sourceIds });
-                              });
-
-          eyeson.join({ audio: false, video: true });
-        }
-        break;
-      case "accept":
-        if (this.state.connecting) {
-          console.log("TDX Eyeson  Room joined");
-          this.stopWatchRoomJoined.start();
-        }
-        break;
-      case "recording_update":
-        if (event.recording.created_at) {
-          this.stopWatchConnectionStarted.stop();
-          this.stopWatchRoomJoined.stop();
-          console.log("TD TIME", this.stopWatchRoomJoined.getTime());
-        }
-
-        this.setState({
-          recording_link: event.recording.links.download,
-          recording_duration: event.recording.duration
-        });
-        break;
-      case "podium":
-        if (this.state.connecting) {
-          this.setState({
-            connecting: false
-          });
-          // pick a random screen to be shown after connect
-          this.toggleScreen();
-          this.toggleRecording();
-        }
-
-        break;
-      default:
-    }
+    this.setState({
+      recording_bucket: "",
+      recording_link: ""
+    });
   }
 
   private startOpenningRoom = async (event: React.ChangeEvent<HTMLInputElement>) => {
     this.stopWatchConnectionStarted.start();
-    const apiKey = event.target.value.trim();
-    if (apiKey.length !== API_KEY_LENGTH) { return; }
 
-    this.roomClient = new RoomClient(apiKey);
+    const clientId = event.target.value.trim();
+    if (clientId.length !== CLIENT_ID_LENGTH) { return; }
 
-    this.setState({ connecting: true });
+    this.setState({
+      clientId: clientId,
+      connecting: true
+    });
 
-    const party = await this.roomClient.openRoom();
-
+    // this should be implemented server-side due to security issues
+    this.recordingService = new EyesonRecordingService();
+    const party = await this.recordingService.obtainToken(clientId);
+    if (typeof(party) === 'undefined' || party.auth_token == null) { return }
     console.log("TDX Room opened\n", JSON.stringify(party));
 
-    // eyeson.start(party.access_key);
-    eyeson.connect(party.access_key);
+    // initialize eyeson client once a client has been registered via webservice
+    eyeson.connect(party.auth_token);
 
-    this.setState({ guest_link: party.links.guest_join });
+    this.setState({ connecting: false });
+
+    await this.screenCap.getScreenSources()
+                              .then(sourceIds => {
+                                this.setState({ sourceIds: sourceIds });
+                              });
+
+    // pick a random screen to be recorded
+    await this.pickRandomStream(() => this.toggleRecording());
   }
 
   private toggleRecording = () => {
-    eyeson.send({
-      type: this.state.recording ? 'stop_recording' : 'start_recording',
-    });
+    if (this.state.recording) {
+      eyeson.stopRecording();
+    } else {
+      // this generates a new recording session every time. if you want to just switch the screen within the same recording, use eyeson.switchStream
+      eyeson.startRecording(this.state.stream, this.state.clientId, this.state.recording_bucket, "")
+      .then((recordingId: any) => {
+        console.debug('recording started', recordingId);
+      })
+      .catch((err: any) => {
+        console.debug('recording error', err);
+      });
+    }
+
     this.setState({ recording: !this.state.recording });
   }
 
-  private updateStream(stream: MediaStream) {
-    eyeson.send({
-      type: 'start_screen_capture',
-      audio: false,
-      screen: true,
-      screenStream: stream
-    });
-    this.setState({ stream: stream });
+  private toggleScreen = async () => {
+    await this.pickRandomStream(() => eyeson.switchStream(this.state.stream));
   }
 
-  private toggleScreen = async () => {
+  private pickRandomStream = async (callback: () => void) => {
     if (this.state.sourceIds.length <= 0) { return }
     this.sourceIndex = this.sourceIndex < this.state.sourceIds.length ? this.sourceIndex + 1 : 0;
     const sourceId = this.state.sourceIds[this.sourceIndex];
     this.screenCap.getScreenStream(sourceId)
-                  .then(this.updateStream.bind(this));
+                  .then(stream => {
+                    this.setState({ stream: stream }, callback);
+                  });
   }
 
   /**
@@ -166,12 +138,12 @@ class App extends Component<{}, AppState> {
             {!this.state.stream && (
               <Fragment>
                 <TextField
-                  label="API Access Key"
+                  label="Client ID"
                   onChange={this.startOpenningRoom}
                   disabled={this.state.connecting}
                 />
                 <TextFieldHelperText>
-                  Use your API access.
+                  Use your unique client ID.
                 </TextFieldHelperText>
               </Fragment>
             )}
@@ -189,7 +161,7 @@ class App extends Component<{}, AppState> {
                 {this.state.recording && <>Recording</>}
               </Fragment>
             )}
-            {this.state.sourceIds.length > 0 && (
+            {this.state.sourceIds.length > 0 && this.state.recording && (
               <Fragment >
                 <IconButton
                   onClick={this.toggleScreen}
@@ -204,10 +176,7 @@ class App extends Component<{}, AppState> {
             {this.state.recording && <StopWatch text="since we started to record screen." startImmediately={true} />}
           </GridCell>
           <GridCell span={12}>
-            {this.state.guest_link && <><strong>Guest Link: </strong> <a rel="noopener noreferrer" target="_blank" href={this.state.guest_link} >{this.state.guest_link}</a></>}
-          </GridCell>
-          <GridCell span={12}>
-            {this.state.recording_link && <><div>Recording duration: {this.state.recording_duration} seconds.</div> <a rel="noopener noreferrer" target="_blank" href={this.state.recording_link} >DOWNLOAD</a></>}
+            {this.state.stream && !this.state.recording && this.state.recording_link && <><a rel="noopener noreferrer" target="_blank" href={this.state.recording_link} >DOWNLOAD</a></>}
           </GridCell>
         </Grid>
       </ThemeProvider>
