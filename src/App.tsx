@@ -68,13 +68,18 @@ class App extends Component<{}, AppState> {
       connecting: true
     });
 
-    // this should be implemented server-side due to security issues
+    /* AUTH_TOKEN EXCHANGE
+      This should be implmeneted server-side due to security issues (master key visible in client).
+      You propably don't want to generate the presigned AWS URLs for recordings in the client as well.
+      Also for webhooks a webservice will be mandatory.
+    */
     this.recordingService = new EyesonRecordingService();
     const party = await this.recordingService.obtainToken(clientId);
     if (typeof(party) === 'undefined' || party.auth_token == null) { return }
     console.log("TDX Room opened\n", JSON.stringify(party));
+    /* END OF AUTH_TOKEN EXCHANGE */
 
-    // initialize eyeson client once a client has been registered via webservice
+    // initialize eyeson client once an auth_token has been obtained for the spcific client
     eyeson.connect(party.auth_token);
 
     this.setState({ connecting: false });

@@ -9,13 +9,13 @@
     "@types/react": "16.9.11",
     "@types/react-dom": "16.9.3",
     "electron-is-dev": "^1.1.0",
+    "eyeson": "./eyeson",
     "react": "^16.11.0",
     "react-compound-timer": "^1.1.15",
     "react-dom": "^16.11.0",
     "react-scripts": "3.2.0",
     "rmwc": "^5.7.1",
-    "typescript": "^3.6.4",
-    "eyeson": "./eyeson"
+    "typescript": "^3.6.4"
   },
   "scripts": {
     "start:server": "rescripts start",

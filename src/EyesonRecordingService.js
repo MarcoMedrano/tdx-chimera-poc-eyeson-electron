@@ -2,7 +2,7 @@ class EyesonRecordingService {
 
   masterKey = "totally-insecure";
   init = null;
-  serviceUrl = "https://streamrec.dev-visocon.com";
+  serviceUrl = "https://streamrec.eyeson.com";
 
   constructor() {   
     this.init = {
