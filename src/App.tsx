@@ -22,9 +22,10 @@ type AppState = {
   connecting: boolean,
   sourceIds: [string] | [],
   stream: MediaStream | null,
-  recording: boolean,
-  recording_bucket: string | null,
-  recording_link: string | null
+  isRecording: boolean,
+  recordingFileWrite: string | null,
+  recordingFileDownload: string | null,
+  webhooksUrl: string | null
 }
 class App extends Component<{}, AppState> {
 
@@ -43,17 +44,19 @@ class App extends Component<{}, AppState> {
       connecting: false,
       sourceIds: [],
       stream: null,
-      recording: false,
-      recording_bucket: null,
-      recording_link: null
+      isRecording: false,
+      recordingFileWrite: null,
+      recordingFileDownload: null,
+      webhooksUrl: null
     };
     this.screenCap = new ScreenCapture();
   }
 
   public componentDidMount = () => {
     this.setState({
-      recording_bucket: "",
-      recording_link: ""
+      recordingFileWrite: "",
+      recordingFileDownload: "",
+      webhooksUrl: ""
     });
   }
 
@@ -94,20 +97,21 @@ class App extends Component<{}, AppState> {
   }
 
   private toggleRecording = () => {
-    if (this.state.recording) {
+    if (this.state.isRecording) {
       eyeson.stopRecording();
     } else {
       // this generates a new recording session every time. if you want to just switch the screen within the same recording, use eyeson.switchStream
-      eyeson.startRecording(this.state.stream, this.state.clientId, this.state.recording_bucket, "")
+      eyeson.startRecording(this.state.stream, this.state.clientId, this.state.recordingFileWrite, this.state.webhooksUrl)
       .then((recordingId: any) => {
         console.debug('recording started', recordingId);
+        this.stopWatchRoomJoined.start();
       })
       .catch((err: any) => {
         console.debug('recording error', err);
       });
     }
 
-    this.setState({ recording: !this.state.recording });
+    this.setState({ isRecording: !this.state.isRecording });
   }
 
   private toggleScreen = async () => {
@@ -158,15 +162,15 @@ class App extends Component<{}, AppState> {
             {this.state.stream && (
               <Fragment >
                 <IconButton
-                  checked={this.state.recording}
+                  checked={this.state.isRecording}
                   onClick={this.toggleRecording}
                   label="Toggle recording"
-                  icon={this.state.recording ? 'stop' : 'radio_button_checked'}
+                  icon={this.state.isRecording ? 'stop' : 'radio_button_checked'}
                 />
-                {this.state.recording && <>Recording</>}
+                {this.state.isRecording && <>Recording</>}
               </Fragment>
             )}
-            {this.state.sourceIds.length > 0 && this.state.recording && (
+            {this.state.sourceIds.length > 0 && this.state.isRecording && (
               <Fragment >
                 <IconButton
                   onClick={this.toggleScreen}
@@ -178,10 +182,10 @@ class App extends Component<{}, AppState> {
             )}
           </GridCell>
           <GridCell span={12}>
-            {this.state.recording && <StopWatch text="since we started to record screen." startImmediately={true} />}
+            {this.state.isRecording && <StopWatch text="since we started to record screen." startImmediately={true} />}
           </GridCell>
           <GridCell span={12}>
-            {this.state.stream && !this.state.recording && this.state.recording_link && <><a rel="noopener noreferrer" target="_blank" href={this.state.recording_link} >DOWNLOAD</a></>}
+            {this.state.stream && !this.state.isRecording && this.state.recordingFileDownload && <><a rel="noopener noreferrer" target="_blank" href={this.state.recordingFileDownload} >DOWNLOAD</a></>}
           </GridCell>
         </Grid>
       </ThemeProvider>
