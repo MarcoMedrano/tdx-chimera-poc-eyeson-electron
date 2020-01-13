@@ -28,6 +28,10 @@ locally configure the package in packages.json file.
 
 ```javascript
 eyeson.connect(token); // Auth Token gathered by the streamrec service.
+eyeson.onDisconnect(event => {
+  // Handle disconnect, e.g. check network condition and start a new recording.
+  // Note: stopRecording will not trigger this listener.
+});
 eyeson.startRecording(stream, clientId, uploadUrl, webhookUrl)
   .then(recordingId => {
     console.debug('recording started', recordingId);
